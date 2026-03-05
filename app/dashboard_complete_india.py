@@ -67,9 +67,20 @@ st.markdown("""
 def load_models():
     models = {}
     try:
-        for name, path in [('Ensemble', '../models/ensemble/ensemble_model.pkl'), ('XGBoost', '../models/ml_models/xgboost.pkl'), ('Random Forest', '../models/ml_models/random_forest.pkl')]:
-            if os.path.exists(path): models[name] = joblib.load(path)
-    except: pass
+        for name, path in [
+            ('Ensemble', 'models/ensemble/ensemble_model.pkl'),
+            ('XGBoost', 'models/ml_models/xgboost.pkl'),
+            ('Random Forest', 'models/ml_models/random_forest.pkl')
+        ]:
+            if os.path.exists(path):
+                models[name] = joblib.load(path)
+    except Exception as e:
+        st.error(f"⚠️ Error loading models: {e}")
+    
+    if not models:
+        st.error("❌ Models not found. Please check GitHub.")
+        st.stop()
+    
     return models
 
 def safe_divide(a, b, fill=0):
@@ -534,4 +545,5 @@ st.markdown("""
         ⚠️ For educational purposes only. Not financial advice. Prices converted at 1 USD = 83 INR
     </p>
 </div>
+
 """, unsafe_allow_html=True)
