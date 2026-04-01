@@ -7,80 +7,206 @@ import os
 from datetime import datetime, timedelta
 import json
 
-st.set_page_config(page_title="Volatility Forecaster", page_icon="📊", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(
+    page_title="VolStock • AI Stock Volatility Prediction", 
+    page_icon="📈", 
+    layout="wide", 
+    initial_sidebar_state="collapsed"
+)
 
-st.markdown("""
+# Initialize theme
+if 'theme' not in st.session_state:
+    st.session_state.theme = 'dark'
+
+# Handle toggle via pure HTML link with query param
+if 'toggle' in st.query_params:
+    st.session_state.theme = 'light' if st.session_state.theme == 'dark' else 'dark'
+    st.query_params.clear()
+    st.rerun()
+
+# Dynamic CSS based on theme
+if st.session_state.theme == 'dark':
+    st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap');
-    * { font-family: 'Inter', sans-serif; margin: 0; padding: 0; }
-    .stApp { background: #0a0a0f; color: #ffffff; }
-    section[data-testid="stSidebar"] { display: none; }
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600;700&display=swap');
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Rajdhani', sans-serif; }
+    .stApp { background: linear-gradient(135deg, #0a0e27 0%, #1a0b2e 50%, #16213e 100%) !important; color: #e0f2fe !important; }
+    .main .block-container { padding-top: 0rem !important; max-width: 100% !important; padding-bottom: 0rem !important; }
+    section.main > div, div[data-testid="stVerticalBlock"] { position: relative; z-index: 2; }
+    section[data-testid="stSidebar"] { display: none !important; }
+    #MainMenu, footer, .stDeployButton { visibility: hidden !important; }
+    header[data-testid="stHeader"] { display: none !important; }
+    div[data-testid="stVerticalBlock"] > div:first-child { margin-top: 0 !important; gap: 0 !important; }
+    div[data-testid="stVerticalBlock"] { gap: 0 !important; }
+    div[data-testid="stAppViewBlockContainer"] { padding-top: 0 !important; }
     
-    .top-nav { background: #0a0a0f; padding: 1.5rem 3rem; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; }
-    .brand { font-size: 2rem; font-weight: 900; background: linear-gradient(135deg, #ff6ec7 0%, #7c3aed 50%, #06b6d4 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -1px; }
-    .price-ticker { display: flex; align-items: center; gap: 1.5rem; }
-    .live-price { font-size: 1.2rem; font-weight: 700; color: #10b981; }
-    .price-change { padding: 0.3rem 0.7rem; border-radius: 8px; font-weight: 600; font-size: 0.85rem; }
-    .price-change.up { background: rgba(16,185,129,0.15); color: #10b981; }
-    .price-change.down { background: rgba(239,68,68,0.15); color: #ef4444; }
-    .nav-date { color: #6b7280; font-size: 0.9rem; margin-left: 1rem; }
+    /* Theme toggle - pure HTML link styled as a perfect square */
+    .theme-btn-link { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); border-radius: 10px; width: 2.6rem; height: 2.6rem; min-width: 2.6rem; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; text-decoration: none; flex-shrink: 0; box-shadow: 0 4px 14px rgba(99,102,241,0.5); transition: transform 0.15s, filter 0.15s; line-height: 1; }
+    .theme-btn-link:hover { transform: scale(1.08); filter: brightness(1.2); }
+    .brand-group { display: flex; align-items: center; gap: 0.9rem; }
     
-    .metrics-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; padding: 1.5rem 3rem; }
-    .metric-block { background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%); border-radius: 20px; padding: 1.5rem; border-top: 3px solid; transition: all 0.3s ease; }
-    .metric-block:hover { transform: translateY(-5px); box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
-    .metric-block.pink { border-color: #ff6ec7; }
-    .metric-block.purple { border-color: #7c3aed; }
-    .metric-block.cyan { border-color: #06b6d4; }
-    .metric-block.orange { border-color: #f59e0b; }
-    .metric-label { color: #9ca3af; font-size: 0.85rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem; }
-    .metric-value { font-size: 2.5rem; font-weight: 700; background: linear-gradient(135deg, #ffffff 0%, #9ca3af 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    .metric-change { font-size: 0.9rem; margin-top: 0.5rem; font-weight: 600; }
+    .top-nav { background: rgba(10, 14, 39, 0.6); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0, 255, 255, 0.1); padding: 1.2rem 3rem; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 8px 32px rgba(0, 255, 255, 0.1); }
+    .brand { font-family: 'Orbitron', monospace; font-size: 2.2rem; font-weight: 900; background: linear-gradient(135deg, #00ffff 0%, #a78bfa 30%, #ec4899 60%, #00ffff 100%); background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: 2px; text-transform: uppercase; }
+    .price-ticker { display: flex; align-items: center; gap: 1.5rem; font-weight: 600; }
+    .live-price { font-size: 1.4rem; font-weight: 700; color: #00ff88; }
+    .price-change { padding: 0.4rem 0.9rem; border-radius: 8px; font-weight: 700; font-size: 0.95rem; }
+    .price-change.up { background: rgba(0, 255, 136, 0.15); border: 1px solid rgba(0, 255, 136, 0.3); color: #00ff88; }
+    .price-change.down { background: rgba(255, 71, 87, 0.15); border: 1px solid rgba(255, 71, 87, 0.3); color: #ff4757; }
+    .nav-date { color: #64748b; font-size: 0.9rem; margin-left: 1rem; }
+    .model-badge { background: rgba(167, 139, 250, 0.2); color: #a78bfa; padding: 0.3rem 0.8rem; border-radius: 6px; font-size: 0.85rem; font-weight: 700; margin-left: 1rem; }
+    
+    .stTextInput input, .stSelectbox > div > div, .stNumberInput input { background: rgba(15, 23, 42, 0.8) !important; border: 1px solid rgba(0, 255, 255, 0.2) !important; border-radius: 12px !important; color: #e0f2fe !important; padding: 0.9rem 1.2rem !important; font-size: 1.05rem !important; font-weight: 600 !important; }
+    .stSelectbox [data-baseweb="select"] > div { background: rgba(15, 23, 42, 0.8) !important; color: #e0f2fe !important; }
+    .stSelectbox [data-baseweb="select"] span { color: #e0f2fe !important; }
+    .stButton button { background: linear-gradient(135deg, #00ffff 0%, #a78bfa 50%, #ec4899 100%) !important; background-size: 200% auto !important; color: #0a0e27 !important; border: none !important; padding: 0.9rem 2rem !important; font-size: 1.05rem !important; font-weight: 900 !important; border-radius: 12px !important; font-family: 'Orbitron', monospace !important; text-transform: uppercase !important; letter-spacing: 1.5px !important; width: 100% !important; }
+    .stDownloadButton button { background: linear-gradient(135deg, #00ffff 0%, #a78bfa 50%, #ec4899 100%) !important; color: #0a0e27 !important; border: none !important; padding: 0.9rem 2rem !important; font-size: 1.05rem !important; font-weight: 900 !important; border-radius: 12px !important; font-family: 'Orbitron', monospace !important; text-transform: uppercase !important; letter-spacing: 1.5px !important; width: 100% !important; }
+    
+    .metrics-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; padding: 2rem 3rem; }
+    .metric-block { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(20px); border-radius: 24px; padding: 2rem 1.8rem; border: 1px solid rgba(255, 255, 255, 0.05); transition: all 0.3s; }
+    .metric-block:hover { transform: translateY(-5px); box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3); }
+    .metric-label { color: #94a3b8; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 1rem; }
+    .metric-value { font-size: 2.5rem; font-weight: 900; font-family: 'Orbitron', monospace; margin: 0.5rem 0; line-height: 1; }
+    .metric-block.cyan .metric-value { color: #00ffff; text-shadow: 0 0 30px rgba(0, 255, 255, 0.5); }
+    .metric-block.purple .metric-value { color: #a78bfa; text-shadow: 0 0 30px rgba(167, 139, 250, 0.5); }
+    .metric-block.pink .metric-value { color: #ec4899; text-shadow: 0 0 30px rgba(236, 72, 153, 0.5); }
+    .metric-block.orange .metric-value { color: #f59e0b; text-shadow: 0 0 30px rgba(245, 158, 11, 0.5); }
+    .metric-change { color: #64748b; font-size: 0.95rem; margin-top: 0.8rem; }
     .metric-change.up { color: #10b981; }
     .metric-change.down { color: #ef4444; }
     
-    .risk-badge { display: inline-block; padding: 0.5rem 1rem; border-radius: 50px; font-weight: 700; font-size: 1.2rem; }
-    .risk-low { background: rgba(16,185,129,0.2); color: #10b981; }
-    .risk-medium { background: rgba(245,158,11,0.2); color: #f59e0b; }
-    .risk-high { background: rgba(239,68,68,0.2); color: #ef4444; }
+    .risk-badge { display: inline-block; padding: 0.5rem 1.2rem; border-radius: 20px; font-weight: 700; font-size: 1rem; font-family: 'Orbitron', monospace; }
+    .risk-low { background: rgba(0, 255, 136, 0.2); color: #00ff88; border: 2px solid rgba(0, 255, 136, 0.4); }
+    .risk-medium { background: rgba(251, 191, 36, 0.2); color: #fbbf24; border: 2px solid rgba(251, 191, 36, 0.4); }
+    .risk-high { background: rgba(255, 71, 87, 0.2); color: #ff4757; border: 2px solid rgba(255, 71, 87, 0.4); }
     
-    .alert-bar { margin: 0 3rem 2rem 3rem; padding: 1rem 1.5rem; background: rgba(255,110,199,0.1); border-left: 4px solid #ff6ec7; border-radius: 12px; display: flex; align-items: center; gap: 1rem; }
-    .alert-bar.warning { background: rgba(239,68,68,0.1); border-left-color: #ef4444; color: #ef4444; }
-    .alert-bar.success { background: rgba(16,185,129,0.1); border-left-color: #10b981; color: #10b981; }
-    .alert-bar.info { background: rgba(6,182,212,0.1); border-left-color: #06b6d4; color: #06b6d4; }
+    .alert-bar { margin: 0 3rem 2rem 3rem; padding: 1.2rem 2rem; border-radius: 16px; display: flex; align-items: center; gap: 1.2rem; border: 1px solid; font-weight: 600; font-size: 1.05rem; }
+    .alert-bar.warning { background: rgba(255, 71, 87, 0.15); border-color: rgba(255, 71, 87, 0.3); color: #ff4757; }
     
     .content-section { padding: 0 3rem 2rem 3rem; }
-    .section-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 1.5rem; color: #ffffff; }
-    
-    .stTextInput > div > div > input, .stSelectbox > div > div > div, .stNumberInput > div > div > input { background: rgba(255,255,255,0.05) !important; border: 1px solid rgba(255,255,255,0.1) !important; border-radius: 12px !important; color: #ffffff !important; padding: 0.75rem 1rem !important; }
-    .stButton > button { background: linear-gradient(135deg, #ff6ec7 0%, #7c3aed 100%); color: #ffffff; border: none; padding: 0.75rem 2rem; font-size: 1rem; font-weight: 700; border-radius: 12px; width: 100%; text-transform: uppercase; letter-spacing: 1px; transition: all 0.3s; box-shadow: 0 4px 20px rgba(255,110,199,0.3); }
-    .stButton > button:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(255,110,199,0.5); }
-    
-    .history-item { background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 12px; margin-bottom: 0.5rem; border-left: 3px solid #7c3aed; display: flex; justify-content: space-between; align-items: center; }
-    
-    #MainMenu {visibility: hidden;} footer {visibility: hidden;} .stDeployButton {display: none;}
-    ::-webkit-scrollbar { width: 8px; } ::-webkit-scrollbar-track { background: #0a0a0f; }
-    ::-webkit-scrollbar-thumb { background: linear-gradient(135deg, #ff6ec7, #7c3aed); border-radius: 10px; }
+    .section-title { font-family: 'Orbitron', monospace; font-size: 1.8rem; font-weight: 900; margin-bottom: 2rem; background: linear-gradient(135deg, #00ffff 0%, #a78bfa 50%, #ec4899 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-transform: uppercase; letter-spacing: 2px; }
+    .history-item { background: rgba(15, 23, 42, 0.7); padding: 1.2rem 1.5rem; border-radius: 12px; margin-bottom: 0.8rem; border-left: 3px solid #a78bfa; transition: all 0.3s; }
+    ::-webkit-scrollbar { width: 10px; }
+    ::-webkit-scrollbar-track { background: #0a0e27; }
+    ::-webkit-scrollbar-thumb { background: linear-gradient(135deg, #00ffff, #a78bfa); border-radius: 10px; }
 </style>
 """, unsafe_allow_html=True)
+else:
+    st.markdown("""
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap');
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+    .stApp { background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #cbd5e1 100%) !important; color: #1e293b !important; }
+    .main .block-container { padding-top: 0rem !important; max-width: 100% !important; padding-bottom: 0rem !important; }
+    section.main > div, div[data-testid="stVerticalBlock"] { position: relative; z-index: 2; }
+    section[data-testid="stSidebar"] { display: none !important; }
+    #MainMenu, footer, .stDeployButton { visibility: hidden !important; }
+    header[data-testid="stHeader"] { display: none !important; }
+    div[data-testid="stVerticalBlock"] > div:first-child { margin-top: 0 !important; gap: 0 !important; }
+    div[data-testid="stVerticalBlock"] { gap: 0 !important; }
+    div[data-testid="stAppViewBlockContainer"] { padding-top: 0 !important; }
+    
+    /* Theme toggle - pure HTML link styled as a perfect square */
+    .theme-btn-link { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); border-radius: 10px; width: 2.6rem; height: 2.6rem; min-width: 2.6rem; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; text-decoration: none; flex-shrink: 0; box-shadow: 0 4px 12px rgba(99,102,241,0.3); transition: transform 0.15s, filter 0.15s; line-height: 1; }
+    .theme-btn-link:hover { transform: scale(1.08); filter: brightness(1.2); }
+    .brand-group { display: flex; align-items: center; gap: 0.9rem; }
+    
+    /* Fix expander (Alert Settings) text color */
+    .streamlit-expanderHeader { color: #1e293b !important; font-weight: 600 !important; }
+    details summary { color: #1e293b !important; }
+    details summary p { color: #1e293b !important; }
+    [data-testid="stExpander"] summary { color: #1e293b !important; }
+    [data-testid="stExpander"] summary span { color: #1e293b !important; }
+    [data-testid="stExpander"] p { color: #1e293b !important; }
+    
+    /* Fix slider label */
+    [data-testid="stSlider"] label, [data-testid="stSlider"] p { color: #1e293b !important; }
+    [data-testid="stSlider"] [data-testid="stMarkdownContainer"] p { color: #475569 !important; }
+    
+    /* Fix download button / export CSV in light mode */
+    .stDownloadButton button { background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%) !important; color: #ffffff !important; border: none !important; padding: 0.9rem 2rem !important; font-size: 1rem !important; font-weight: 700 !important; border-radius: 12px !important; text-transform: uppercase !important; letter-spacing: 1px !important; width: 100% !important; }
+    
+    .top-nav { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(20px); border-bottom: 2px solid #e2e8f0; padding: 1.2rem 3rem; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); }
+    .brand { font-size: 2rem; font-weight: 900; background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -0.5px; }
+    .price-ticker { display: flex; align-items: center; gap: 1.5rem; font-weight: 600; }
+    .live-price { font-size: 1.4rem; font-weight: 700; color: #10b981; }
+    .price-change { padding: 0.4rem 0.9rem; border-radius: 8px; font-weight: 700; font-size: 0.95rem; }
+    .price-change.up { background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); color: #059669; }
+    .price-change.down { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #dc2626; }
+    .nav-date { color: #64748b; font-size: 0.9rem; margin-left: 1rem; }
+    .model-badge { background: rgba(139, 92, 246, 0.15); color: #7c3aed; padding: 0.3rem 0.8rem; border-radius: 6px; font-size: 0.85rem; font-weight: 700; margin-left: 1rem; border: 1px solid rgba(139, 92, 246, 0.3); }
+    
+    .stTextInput input, .stSelectbox > div > div, .stNumberInput input { background: #ffffff !important; border: 2px solid #e2e8f0 !important; border-radius: 12px !important; color: #1e293b !important; padding: 0.9rem 1.2rem !important; font-size: 1rem !important; font-weight: 600 !important; }
+    .stSelectbox [data-baseweb="select"] > div { background: #ffffff !important; color: #1e293b !important; }
+    .stSelectbox [data-baseweb="select"] span { color: #1e293b !important; }
+    .stButton button { background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%) !important; color: #ffffff !important; border: none !important; padding: 0.9rem 2rem !important; font-size: 1rem !important; font-weight: 700 !important; border-radius: 12px !important; text-transform: uppercase !important; letter-spacing: 1px !important; width: 100% !important; }
+    
+    .metrics-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; padding: 2rem 3rem; }
+    .metric-block { background: #ffffff; border-radius: 20px; padding: 2rem 1.8rem; border: 2px solid #e2e8f0; transition: all 0.3s; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); }
+    .metric-block:hover { transform: translateY(-5px); box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1); }
+    .metric-label { color: #64748b; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 1rem; }
+    .metric-value { font-size: 2.5rem; font-weight: 900; margin: 0.5rem 0; line-height: 1; }
+    .metric-block.blue .metric-value { color: #3b82f6; }
+    .metric-block.purple .metric-value { color: #8b5cf6; }
+    .metric-block.pink .metric-value { color: #ec4899; }
+    .metric-block.orange .metric-value { color: #f59e0b; }
+    .metric-change { color: #64748b; font-size: 0.95rem; margin-top: 0.8rem; }
+    .metric-change.up { color: #10b981; }
+    .metric-change.down { color: #ef4444; }
+    
+    .risk-badge { display: inline-block; padding: 0.5rem 1.2rem; border-radius: 20px; font-weight: 700; font-size: 1rem; }
+    .risk-low { background: rgba(16, 185, 129, 0.15); color: #059669; border: 2px solid rgba(16, 185, 129, 0.3); }
+    .risk-medium { background: rgba(245, 158, 11, 0.15); color: #d97706; border: 2px solid rgba(245, 158, 11, 0.3); }
+    .risk-high { background: rgba(239, 68, 68, 0.15); color: #dc2626; border: 2px solid rgba(239, 68, 68, 0.3); }
+    
+    .alert-bar { margin: 0 3rem 2rem 3rem; padding: 1.2rem 2rem; border-radius: 12px; display: flex; align-items: center; gap: 1.2rem; border: 2px solid; font-weight: 600; font-size: 1.05rem; }
+    .alert-bar.warning { background: rgba(239, 68, 68, 0.1); border-color: #ef4444; color: #dc2626; }
+    
+    .content-section { padding: 0 3rem 2rem 3rem; }
+    .section-title { font-size: 1.8rem; font-weight: 900; margin-bottom: 2rem; color: #1e293b; text-transform: uppercase; letter-spacing: 1px; }
+    .history-item { background: #ffffff; padding: 1.2rem 1.5rem; border-radius: 12px; margin-bottom: 0.8rem; border-left: 4px solid #8b5cf6; transition: all 0.3s; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); }
+    ::-webkit-scrollbar { width: 10px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: linear-gradient(135deg, #3b82f6, #8b5cf6); border-radius: 10px; }
+</style>
+""", unsafe_allow_html=True)
+
+# Chart colors based on theme
+chart_config = {
+    'dark': {
+        'line': '#00ffff',
+        'fill': 'rgba(0, 255, 255, 0.1)',
+        'pred': '#ec4899',
+        'conf': 'rgba(167, 139, 250, 0.2)',
+        'plot_bg': 'rgba(10, 14, 39, 0.8)',
+        'paper_bg': 'rgba(10, 14, 39, 0.6)',
+        'grid': 'rgba(255, 255, 255, 0.05)',
+        'font': '#e0f2fe'
+    },
+    'light': {
+        'line': '#3b82f6',
+        'fill': 'rgba(59, 130, 246, 0.1)',
+        'pred': '#ec4899',
+        'conf': 'rgba(139, 92, 246, 0.2)',
+        'plot_bg': 'rgba(255, 255, 255, 0.9)',
+        'paper_bg': 'rgba(255, 255, 255, 0.9)',
+        'grid': 'rgba(0, 0, 0, 0.05)',
+        'font': '#1e293b'
+    }
+}
 
 @st.cache_resource
 def load_models():
     models = {}
     try:
         for name, path in [
-            ('Ensemble', 'models/ensemble/ensemble_model.pkl'),
-            ('XGBoost', 'models/ml_models/xgboost.pkl'),
-            ('Random Forest', 'models/ml_models/random_forest.pkl')
+            ('Ensemble', '../models/ensemble/ensemble_model.pkl'), 
+            ('XGBoost', '../models/ml_models/xgboost.pkl'), 
+            ('Random Forest', '../models/ml_models/random_forest.pkl')
         ]:
-            if os.path.exists(path):
+            if os.path.exists(path): 
                 models[name] = joblib.load(path)
-    except Exception as e:
-        st.error(f"⚠️ Error loading models: {e}")
-    
-    if not models:
-        st.error("❌ Models not found. Please check GitHub.")
-        st.stop()
-    
+    except: 
+        pass
     return models
 
 def safe_divide(a, b, fill=0):
@@ -222,6 +348,7 @@ def fetch_and_predict(ticker, model_name, models):
     
     return {
         'ticker': ticker,
+        'model_used': model_name,
         'current_price': current_price,
         'price_change': price_change,
         'price_change_pct': price_change_pct,
@@ -243,6 +370,7 @@ def save_prediction_history(result):
     history_entry = {
         'timestamp': datetime.now().isoformat(),
         'ticker': result['ticker'],
+        'model': result['model_used'],
         'current_vol': float(result['current_vol']),
         'predicted_vol': float(result['predicted_vol']),
         'risk_score': result['risk_score']
@@ -270,6 +398,7 @@ def export_to_csv(result):
     df = pd.DataFrame([{
         'Timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         'Ticker': result['ticker'],
+        'Model': result['model_used'],
         'Current_Price_INR': result['current_price'] * 83,
         'Current_Volatility': result['current_vol'],
         'Predicted_Volatility': result['predicted_vol'],
@@ -280,6 +409,7 @@ def export_to_csv(result):
     }])
     return df.to_csv(index=False)
 
+# Initialize
 if 'result' not in st.session_state:
     st.session_state.result = None
 if 'alert_threshold' not in st.session_state:
@@ -291,34 +421,46 @@ if not models:
     st.stop()
 
 result = st.session_state.result
+
+# Theme icon: in dark mode show moon, in light mode show sun
+theme_icon = "🌙" if st.session_state.theme == 'dark' else "☀️"
+
+# Header — toggle is a pure <a href="?toggle=1"> styled as a square button, no st.button needed
 if result:
     price_class = "up" if result['price_change'] >= 0 else "down"
     price_arrow = "↑" if result['price_change'] >= 0 else "↓"
     st.markdown(f"""
     <div class="top-nav">
-        <div class="brand">VOLATILITY FORECASTER</div>
+        <div class="brand-group">
+            <a href="?toggle=1" class="theme-btn-link">{theme_icon}</a>
+            <div class="brand">VOLSTOCK</div>
+        </div>
         <div class="price-ticker">
             <div class="live-price">₹{result['current_price']*83:.2f}</div>
             <div class="price-change {price_class}">
                 {price_arrow} ₹{abs(result['price_change']*83):.2f} ({result['price_change_pct']:+.2f}%)
             </div>
-            <div class="nav-date">{result['ticker']} • {datetime.now().strftime('%A, %d %B %Y')}</div>
+            <div class="nav-date">{result['ticker']} <span class="model-badge">Model: {result['model_used']}</span> • {datetime.now().strftime('%d %b %Y')}</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
 else:
     st.markdown(f"""
     <div class="top-nav">
-        <div class="brand">VOLATILITY FORECASTER</div>
+        <div class="brand-group">
+            <a href="?toggle=1" class="theme-btn-link">{theme_icon}</a>
+            <div class="brand">VOLSTOCK</div>
+        </div>
         <div class="nav-date">{datetime.now().strftime('%A, %d %B %Y')}</div>
     </div>
     """, unsafe_allow_html=True)
 
+# Inputs
 col1, col2, col3, col4 = st.columns([3, 2, 1.3, 1.3])
 with col1:
     ticker = st.text_input("Stock Ticker", "AAPL", label_visibility="collapsed", placeholder="Enter ticker (e.g., AAPL)").upper().strip()
 with col2:
-    model_name = st.selectbox("Model", list(models.keys()), label_visibility="collapsed")
+    model_name = st.selectbox("Select Model", list(models.keys()), label_visibility="collapsed")
 with col3:
     predict_btn = st.button("🚀 PREDICT")
 with col4:
@@ -329,7 +471,7 @@ with st.expander("⚙️ Alert Settings"):
     st.session_state.alert_threshold = alert_threshold / 100
 
 if predict_btn:
-    with st.spinner(""):
+    with st.spinner("Analyzing..."):
         st.session_state.result = fetch_and_predict(ticker, model_name, models)
         if st.session_state.result:
             save_prediction_history(st.session_state.result)
@@ -344,6 +486,7 @@ if compare_spy:
 
 result = st.session_state.result
 
+# Main Content
 if result:
     if result['predicted_vol'] > st.session_state.alert_threshold:
         st.markdown(f"""
@@ -353,29 +496,31 @@ if result:
         """, unsafe_allow_html=True)
     
     risk_class = "risk-low" if result['risk_score'] <= 3 else "risk-medium" if result['risk_score'] <= 7 else "risk-high"
+    colors = 'cyan purple pink orange' if st.session_state.theme == 'dark' else 'blue purple pink orange'
+    col_classes = colors.split()
     
     st.markdown(f"""
     <div class="metrics-row">
-        <div class="metric-block pink">
+        <div class="metric-block {col_classes[0]}">
             <div class="metric-label">Current Volatility</div>
             <div class="metric-value">{result['current_vol']:.1%}</div>
             <div class="metric-change {'up' if result['current_vol'] > 0.3 else 'down'}">
                 {'↑' if result['current_vol'] > 0.3 else '↓'} {abs(result['current_vol'] - 0.3):.1%} vs normal
             </div>
         </div>
-        <div class="metric-block purple">
+        <div class="metric-block {col_classes[1]}">
             <div class="metric-label">Predicted Volatility</div>
             <div class="metric-value">{result['predicted_vol']:.1%}</div>
             <div class="metric-change {'up' if result['predicted_vol'] > result['current_vol'] else 'down'}">
                 {'↑' if result['predicted_vol'] > result['current_vol'] else '↓'} {abs(result['predicted_vol'] - result['current_vol']):.1%}
             </div>
         </div>
-        <div class="metric-block cyan">
-            <div class="metric-label">Confidence</div>
+        <div class="metric-block {col_classes[2]}">
+            <div class="metric-label">Model Confidence</div>
             <div class="metric-value">{result['confidence']:.1%}</div>
             <div class="metric-change up">±{2.0:.1f}% error</div>
         </div>
-        <div class="metric-block orange">
+        <div class="metric-block {col_classes[3]}">
             <div class="metric-label">Risk Score</div>
             <div class="metric-value">{result['risk_score']}/10</div>
             <div class="metric-change"><span class="risk-badge {risk_class}">{result['risk_label']}</span></div>
@@ -387,38 +532,39 @@ if result:
     with col1:
         csv_data = export_to_csv(result)
         st.download_button(
-            "📥 Export CSV",
+            "📥 EXPORT CSV",
             csv_data,
             f"{result['ticker']}_prediction_{datetime.now().strftime('%Y%m%d')}.csv",
             "text/csv",
             use_container_width=True
         )
     with col2:
-        if st.button("📜 View History", use_container_width=True):
+        if st.button("📜 VIEW HISTORY", use_container_width=True):
             st.session_state.show_history = not st.session_state.get('show_history', False)
     with col3:
-        st.button("🔄 Refresh Data", use_container_width=True, on_click=lambda: st.rerun())
+        st.button("🔄 REFRESH", use_container_width=True, on_click=lambda: st.rerun())
     
     if st.session_state.get('show_history', False):
-        st.markdown("### 📜 Recent Predictions")
+        st.markdown('<div class="content-section"><h2 class="section-title">📜 Recent Predictions</h2>', unsafe_allow_html=True)
         history = load_prediction_history()
         if history:
             for h in reversed(history[-5:]):
                 st.markdown(f"""
                 <div class="history-item">
                     <div>
-                        <strong>{h['ticker']}</strong> • {datetime.fromisoformat(h['timestamp']).strftime('%Y-%m-%d %H:%M')}
+                        <strong>{h['ticker']}</strong> • {h.get('model', 'N/A')} • {datetime.fromisoformat(h['timestamp']).strftime('%Y-%m-%d %H:%M')}
                         <br><small>Predicted: {h['predicted_vol']:.1%} | Risk: {h['risk_score']}/10</small>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
         else:
             st.info("No prediction history yet")
+        st.markdown('</div>', unsafe_allow_html=True)
     
-    st.markdown('<div class="content-section">', unsafe_allow_html=True)
-    st.markdown('<h2 class="section-title">📈 Volatility Forecast with Confidence Interval</h2>', unsafe_allow_html=True)
+    st.markdown('<div class="content-section"><h2 class="section-title">📈 Volatility Forecast Analysis</h2>', unsafe_allow_html=True)
     
     df_plot = result['data'].tail(252)
+    cfg = chart_config[st.session_state.theme]
     fig = go.Figure()
     
     fig.add_trace(go.Scatter(
@@ -426,17 +572,17 @@ if result:
         y=df_plot['vol_21d'],
         mode='lines',
         name='Historical Volatility',
-        line=dict(color='#ff6ec7', width=3),
+        line=dict(color=cfg['line'], width=3),
         fill='tozeroy',
-        fillcolor='rgba(255, 110, 199, 0.1)'
+        fillcolor=cfg['fill']
     ))
     
     fig.add_trace(go.Scatter(
         x=[result['latest_date'], result['latest_date']],
         y=[result['lower_bound'], result['upper_bound']],
         fill='toself',
-        fillcolor='rgba(124, 58, 237, 0.2)',
-        line=dict(color='rgba(124, 58, 237, 0)'),
+        fillcolor=cfg['conf'],
+        line=dict(color='rgba(0,0,0,0)'),
         name='95% Confidence',
         showlegend=True
     ))
@@ -446,22 +592,26 @@ if result:
         y=[result['predicted_vol']],
         mode='markers',
         name='Prediction',
-        marker=dict(color='#7c3aed', size=25, symbol='star', line=dict(color='#ffffff', width=2))
+        marker=dict(color=cfg['pred'], size=25, symbol='star', line=dict(color='#ffffff', width=2))
     ))
     
-    fig.add_hline(y=st.session_state.alert_threshold, line_dash="dash", line_color="#ef4444", 
-                 annotation_text=f"Alert Threshold ({st.session_state.alert_threshold:.0%})")
+    fig.add_hline(
+        y=st.session_state.alert_threshold, 
+        line_dash="dash", 
+        line_color="#ef4444", 
+        annotation_text=f"Alert Threshold ({st.session_state.alert_threshold:.0%})"
+    )
     
     fig.update_layout(
-        title=f'{result["ticker"]} Volatility Forecast',
+        title=f'{result["ticker"]} • {result["model_used"]} Forecast',
         xaxis_title='',
         yaxis_title='Annualized Volatility',
-        plot_bgcolor='rgba(0,0,0,0)',
-        paper_bgcolor='rgba(0,0,0,0)',
-        font=dict(color='#ffffff', size=14),
+        plot_bgcolor=cfg['plot_bg'],
+        paper_bgcolor=cfg['paper_bg'],
+        font=dict(color=cfg['font'], size=14),
         height=600,
-        yaxis=dict(tickformat='.0%', gridcolor='rgba(255, 255, 255, 0.05)'),
-        xaxis=dict(gridcolor='rgba(255, 255, 255, 0.05)'),
+        yaxis=dict(tickformat='.0%', gridcolor=cfg['grid']),
+        xaxis=dict(gridcolor=cfg['grid']),
         hovermode='x unified'
     )
     
@@ -469,81 +619,90 @@ if result:
     st.markdown('</div>', unsafe_allow_html=True)
     
     if 'spy_result' in st.session_state:
-        st.markdown("### 📊 Comparison with SPY")
+        st.markdown('<div class="content-section"><h2 class="section-title">📊 Comparison with S&P 500</h2>', unsafe_allow_html=True)
         col1, col2 = st.columns(2)
         with col1:
-            st.metric(f"{result['ticker']} Risk", f"{result['risk_score']}/10")
+            st.metric(f"{result['ticker']} Risk", f"{result['risk_score']}/10", f"{result['risk_label']}")
         with col2:
             spy = st.session_state.spy_result
-            st.metric("SPY Risk", f"{spy['risk_score']}/10")
+            st.metric("SPY Risk", f"{spy['risk_score']}/10", f"{spy['risk_label']}")
+        st.markdown('</div>', unsafe_allow_html=True)
     
     st.markdown("---")
-    st.markdown("## 📖 Feature Guide")
+    st.markdown('<div class="content-section"><h2 class="section-title">📖 Feature Guide</h2>', unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns(3)
     
     with col1:
         st.markdown("""
-        ### 🎯 Metrics Explained
+        ### 🎯 Metrics
         
-        **Current Volatility:** 21-day realized volatility (annualized percentage)
+        **Current Volatility:** 21-day realized volatility (annualized)
         
-        **Predicted Volatility:** Model's forecast for next 21 days
+        **Predicted Volatility:** Forecast for next 21 days
         
-        **Confidence:** R² score showing model accuracy (94.6% = highly reliable)
+        **Confidence:** R² score showing accuracy
         
-        **Risk Score:** 1-10 rating based on predicted volatility
-        - 1-3: Low risk (stable markets)
-        - 4-6: Medium risk (moderate fluctuation)
-        - 7-10: High risk (volatile markets)
+        **Risk Score:** 1-10 rating
+        - 1-3: Low risk
+        - 4-6: Medium risk
+        - 7-10: High risk
         """)
     
     with col2:
         st.markdown("""
-        ### 🔘 Button Functions
+        ### 🔘 Actions
         
-        **📥 Export CSV:** Download prediction data as spreadsheet with timestamp, prices in INR, and risk metrics
+        **📥 Export CSV:** Download prediction data
         
-        **📜 View History:** See your last 5 predictions with timestamps and risk scores
+        **📜 View History:** Last 5 predictions
         
-        **🔄 Refresh Data:** Fetch latest stock data from Yahoo Finance
+        **🔄 Refresh:** Fetch latest data
         
-        **📊 VS SPY:** Compare your stock's risk with S&P 500 index benchmark
+        **📊 VS SPY:** Compare with S&P 500
         
-        **⚙️ Alert Settings:** Set custom volatility threshold - get alerts when prediction exceeds your limit
+        **⚙️ Alerts:** Set custom thresholds
         """)
     
     with col3:
         st.markdown("""
-        ### 📈 Chart Elements
+        ### 📈 Chart Guide
         
-        **Pink Line:** Historical volatility over past year (252 trading days)
+        **Blue/Cyan Line:** Historical volatility
         
-        **Purple Star:** Predicted volatility for next 21 days
+        **Pink Star:** Predicted volatility
         
-        **Purple Shaded Area:** 95% confidence interval showing ±2% error range
+        **Purple Area:** 95% confidence interval
         
-        **Red Dashed Line:** Your custom alert threshold (adjustable in settings)
-        
-        **Gradient Fill:** Visual emphasis showing volatility trends over time
+        **Red Dashed:** Alert threshold
         """)
+    
+    st.markdown('</div>', unsafe_allow_html=True)
 
 else:
     st.markdown("""
-    <div style='text-align: center; padding: 4rem 0; color: #6b7280;'>
-        <h2 style='font-size: 2rem; margin-bottom: 1rem;'>Enter a stock ticker and click predict</h2>
-        <p>Real-time volatility forecasting • Prices in Indian Rupees (₹) • Risk scoring • Export results</p>
+    <div style='text-align: center; padding: 6rem 2rem;'>
+        <div style='font-size: 5rem; margin-bottom: 2rem;'>📈</div>
+        <h2 style='font-size: 2.5rem; font-weight: 900; margin-bottom: 1.5rem;'>
+            ENTER A STOCK TICKER TO BEGIN
+        </h2>
+        <p style='font-size: 1.2rem; color: #64748b; max-width: 600px; margin: 0 auto; line-height: 1.8;'>
+            Real-time volatility forecasting powered by advanced machine learning
+            <br><br>
+            <span>•</span> Live market data
+            <span>•</span> AI predictions
+            <span>•</span> Risk analysis
+        </p>
     </div>
     """, unsafe_allow_html=True)
 
 st.markdown("---")
 st.markdown("""
-<div style='text-align: center; color: #6b7280; padding: 2rem;'>
-    <p><strong style='color: #c4ff61;'>Stock Volatility Forecaster</strong></p>
+<div style='text-align: center; color: #64748b; padding: 2rem;'>
+    <p><strong style='color: #3b82f6;'>📈 VolStock</strong> • AI Stock Volatility Prediction</p>
     <p>Machine Learning Optimization • Real-Time Predictions • Indian Market Focus</p>
     <p style='font-size: 0.9rem; margin-top: 1rem;'>
-        ⚠️ For educational purposes only. Not financial advice. Prices converted at 1 USD = 83 INR
+        ⚠️ For educational purposes only. Not financial advice. Prices converted at 1 USD = ₹83
     </p>
 </div>
-
 """, unsafe_allow_html=True)
